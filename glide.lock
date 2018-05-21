@@ -1,6 +1,12 @@
-hash: 6e73a788b501941a129c051f9aabe824e15784f5e1244e64735160df1bbec0ff
-updated: 2018-05-21T16:20:07.894996+08:00
+hash: 07c1dc0a624bc0bb37a50aed115a3201543d627df4a3db81be7446c8386ed79f
+updated: 2018-05-21T16:42:56.248987+08:00
 imports:
+- name: github.com/cenkalti/backoff
+  version: 4dc77674aceaabba2c7e3da25d4c823edfb73f99
+- name: github.com/clbanning/x2j
+  version: 5ee34bb343f10ecfc125261107681de62f985cf6
+- name: github.com/franela/goreq
+  version: 9df54ca75ad62b6295f33ca96e16a2ca10bc137a
 - name: github.com/gin-contrib/sse
   version: 22d885f9ecc78bf4ee5d72b937e4bbcdc58e8cae
 - name: github.com/gin-gonic/gin
@@ -16,16 +22,32 @@ imports:
   version: 14ced469f7dc175f6fbf9f55d799f9f12e302965
 - name: github.com/mattn/go-isatty
   version: 6ca4dbf54d38eea1a992b3c722a76a5d1c4cb25c
+- name: github.com/miekg/dns
+  version: e57bf427e68187a27e22adceac868350d7a7079b
 - name: github.com/mongodb/mongo-go-driver
   version: 29a4d7d5b648e5b0b60e03e3bd71c11703f0c203
   subpackages:
   - mongo
+- name: github.com/op/go-logging
+  version: d2e44aa77b7195c0ef782189985dd8550e22e4de
 - name: github.com/ugorji/go
   version: f3cacc17c85ecb7f1b6a9e373ee85d1480919868
   subpackages:
   - codec
+- name: golang.org/x/crypto/ed25519
+  version: 1a580b3eff7814fc9b40602fd35256c63b50f491
+- name: golang.org/x/net/ipv4
+  version: 57065200b4b034a1c8ad54ff77069408c2218ae6
+- name: golang.org/x/net/ipv6
+  version: 57065200b4b034a1c8ad54ff77069408c2218ae6
 - name: golang.org/x/sys/unix
   version: 7c87d13f8e835d2fb3a70a2912c811ed0c1d241b
+- name: gopkg.in/gcfg.v1
+  version: 0ef1a8547f99b94fac9af5377dd72febba18f37c
+  subpackages:
+  - scanner
+  - token
+  - types
 - name: gopkg.in/go-playground/validator.v8
   version: 5f1438d3fca68893a817e4a66806cea46a9e4ebf
 - name: gopkg.in/yaml.v2
