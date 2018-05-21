@@ -1,5 +1,5 @@
-hash: 1f5fb7e11c52a87191e8db14966b3a36d8808e7ba8a83afce1ef8aa4699ede15
-updated: 2018-05-21T16:15:00.904167+08:00
+hash: 6e73a788b501941a129c051f9aabe824e15784f5e1244e64735160df1bbec0ff
+updated: 2018-05-21T16:20:07.894996+08:00
 imports:
 - name: github.com/gin-contrib/sse
   version: 22d885f9ecc78bf4ee5d72b937e4bbcdc58e8cae
@@ -16,14 +16,16 @@ imports:
   version: 14ced469f7dc175f6fbf9f55d799f9f12e302965
 - name: github.com/mattn/go-isatty
   version: 6ca4dbf54d38eea1a992b3c722a76a5d1c4cb25c
+- name: github.com/mongodb/mongo-go-driver
+  version: 29a4d7d5b648e5b0b60e03e3bd71c11703f0c203
+  subpackages:
+  - mongo
 - name: github.com/ugorji/go
   version: f3cacc17c85ecb7f1b6a9e373ee85d1480919868
   subpackages:
   - codec
-- name: golang.org/x/sys
+- name: golang.org/x/sys/unix
   version: 7c87d13f8e835d2fb3a70a2912c811ed0c1d241b
-  subpackages:
-  - unix
 - name: gopkg.in/go-playground/validator.v8
   version: 5f1438d3fca68893a817e4a66806cea46a9e4ebf
 - name: gopkg.in/yaml.v2
