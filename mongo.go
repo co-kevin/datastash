@@ -8,11 +8,15 @@ import (
 
 var mongoClient *mongo.Client
 
+func init() {
+	connectMongo("mongodb://localhost:27017")
+}
+
 func connectMongo(url string) {
 	var err error
 	mongoClient, err = mongo.Connect(context.Background(), url, nil)
 	if err != nil {
-		log.Panic(nil)
+		log.Println("[Error] connect mongo: " + err.Error())
 	}
 }
 
