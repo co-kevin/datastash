@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
-	"log"
 	"net/http"
 )
 
@@ -19,7 +18,7 @@ func stash(c *gin.Context) {
 		go func() {
 			_, err := insertMongoDocument(json.Database, json.Collection, json.Document)
 			if err != nil {
-				log.Println(err)
+				log.Error(err.Error())
 			}
 		}()
 		c.Status(http.StatusOK)

@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"github.com/mongodb/mongo-go-driver/mongo"
-	"log"
 )
 
 var mongoClient *mongo.Client
@@ -16,7 +15,7 @@ func connectMongo(url string) {
 	var err error
 	mongoClient, err = mongo.Connect(context.Background(), url, nil)
 	if err != nil {
-		log.Println("[Error] connect mongo: " + err.Error())
+		log.Errorf("connect mongo: %s", err.Error())
 	}
 }
 

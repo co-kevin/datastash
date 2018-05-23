@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
+	"time"
 )
 
 const (
@@ -63,7 +64,19 @@ func info(c *gin.Context) {
 // 启用 Eureka Client，注册到 Spring Eureka 注册中心
 func enableEurekaClient() {
 	eureka = fargo.NewConn(eurekaHost)
-	eureka.RegisterInstance(instance)
+	if err := eureka.RegisterInstance(instance); err != nil {
+		log.Panic(err.Error())
+	}
+	go startHeartBeat()
+}
+
+func startHeartBeat() {
+	for {
+		if err := eureka.HeartBeatInstance(instance); err != nil {
+			eureka.ReregisterInstance(instance)
+		}
+		time.Sleep(10 * time.Second)
+	}
 }
 
 // 监听程序结束信号，执行 destroy 方法
