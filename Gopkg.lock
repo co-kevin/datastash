@@ -99,8 +99,8 @@
 [[projects]]
   name = "github.com/op/go-logging"
   packages = ["."]
-  revision = "b2cb9fa56473e98db8caba80237377e83fe44db5"
-  version = "v1"
+  revision = "d2e44aa77b7195c0ef782189985dd8550e22e4de"
+
 
 [[projects]]
   name = "github.com/ugorji/go"
@@ -175,6 +175,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "bd23933d87b5a3d65c05046a029465d362251aa575e1666332bde464056a9558"
+  inputs-digest = "a7887274ba68f148a3b13129e5538960a5401d43e669a3cb088f1b7e93b122e2"
   solver-name = "gps-cdcl"
   solver-version = 1
