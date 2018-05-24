@@ -3,39 +3,50 @@ package goreq
 import (
 	"bufio"
 	"bytes"
-	"compress/flate"
 	"compress/gzip"
 	"compress/zlib"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"reflect"
 	"strings"
 	"time"
 )
 
+type itimeout interface {
+	Timeout() bool
+}
 type Request struct {
-	headers           []headerTuple
-	Method            string
-	Uri               string
-	Body              interface{}
-	QueryString       interface{}
-	Timeout           time.Duration
-	ContentType       string
-	Accept            string
-	Host              string
-	UserAgent         string
-	Insecure          bool
-	MaxRedirects      int
-	Proxy             string
-	Compression       *compression
-	BasicAuthUsername string
-	BasicAuthPassword string
+	headers             []headerTuple
+	cookies             []*http.Cookie
+	Method              string
+	Uri                 string
+	Body                interface{}
+	QueryString         interface{}
+	Timeout             time.Duration
+	ContentType         string
+	Accept              string
+	Host                string
+	UserAgent           string
+	Insecure            bool
+	MaxRedirects        int
+	RedirectHeaders     bool
+	Proxy               string
+	proxyConnectHeaders []headerTuple
+	Compression         *compression
+	BasicAuthUsername   string
+	BasicAuthPassword   string
+	CookieJar           http.CookieJar
+	ShowDebug           bool
+	OnBeforeRequest     func(goreq *Request, httpreq *http.Request)
 }
 
 type compression struct {
@@ -45,10 +56,21 @@ type compression struct {
 }
 
 type Response struct {
-	StatusCode    int
-	ContentLength int64
-	Body          *Body
-	Header        http.Header
+	*http.Response
+	Uri  string
+	Body *Body
+	req  *http.Request
+}
+
+func (r Response) CancelRequest() {
+	cancelRequest(DefaultTransport, r.req)
+
+}
+
+func cancelRequest(transport interface{}, r *http.Request) {
+	if tp, ok := transport.(transportRequestCanceler); ok {
+		tp.CancelRequest(r)
+	}
 }
 
 type headerTuple struct {
@@ -64,6 +86,10 @@ type Body struct {
 type Error struct {
 	timeout bool
 	Err     error
+}
+
+type transportRequestCanceler interface {
+	CancelRequest(*http.Request)
 }
 
 func (e *Error) Timeout() bool {
@@ -90,13 +116,7 @@ func (b *Body) Close() error {
 }
 
 func (b *Body) FromJsonTo(o interface{}) error {
-	if body, err := ioutil.ReadAll(b); err != nil {
-		return err
-	} else if err := json.Unmarshal(body, o); err != nil {
-		return err
-	}
-
-	return nil
+	return json.NewDecoder(b).Decode(o)
 }
 
 func (b *Body) ToString() (string, error) {
@@ -119,16 +139,6 @@ func Gzip() *compression {
 
 func Deflate() *compression {
 	reader := func(buffer io.Reader) (io.ReadCloser, error) {
-		return flate.NewReader(buffer), nil
-	}
-	writer := func(buffer io.Writer) (io.WriteCloser, error) {
-		return flate.NewWriter(buffer, -1)
-	}
-	return &compression{writer: writer, reader: reader, ContentEncoding: "deflate"}
-}
-
-func Zlib() *compression {
-	reader := func(buffer io.Reader) (io.ReadCloser, error) {
 		return zlib.NewReader(buffer)
 	}
 	writer := func(buffer io.Writer) (io.WriteCloser, error) {
@@ -137,22 +147,75 @@ func Zlib() *compression {
 	return &compression{writer: writer, reader: reader, ContentEncoding: "deflate"}
 }
 
-func paramParse(query interface{}) (string, error) {
-	var (
-		v = &url.Values{}
-		s = reflect.ValueOf(query)
-		t = reflect.TypeOf(query)
-	)
+func Zlib() *compression {
+	return Deflate()
+}
 
+func paramParse(query interface{}) (string, error) {
 	switch query.(type) {
 	case url.Values:
 		return query.(url.Values).Encode(), nil
+	case *url.Values:
+		return query.(*url.Values).Encode(), nil
 	default:
-		for i := 0; i < s.NumField(); i++ {
-			v.Add(strings.ToLower(t.Field(i).Name), fmt.Sprintf("%v", s.Field(i).Interface()))
-		}
-		return v.Encode(), nil
+		var v = &url.Values{}
+		err := paramParseStruct(v, query)
+		return v.Encode(), err
 	}
+}
+
+func paramParseStruct(v *url.Values, query interface{}) error {
+	var (
+		s = reflect.ValueOf(query)
+		t = reflect.TypeOf(query)
+	)
+	for t.Kind() == reflect.Ptr || t.Kind() == reflect.Interface {
+		s = s.Elem()
+		t = s.Type()
+	}
+
+	if t.Kind() != reflect.Struct {
+		return errors.New("Can not parse QueryString.")
+	}
+
+	for i := 0; i < t.NumField(); i++ {
+		var name string
+
+		field := s.Field(i)
+		typeField := t.Field(i)
+
+		if !field.CanInterface() {
+			continue
+		}
+
+		urlTag := typeField.Tag.Get("url")
+		if urlTag == "-" {
+			continue
+		}
+
+		name, opts := parseTag(urlTag)
+
+		var omitEmpty, squash bool
+		omitEmpty = opts.Contains("omitempty")
+		squash = opts.Contains("squash")
+
+		if squash {
+			err := paramParseStruct(v, field.Interface())
+			if err != nil {
+				return err
+			}
+			continue
+		}
+
+		if urlTag == "" {
+			name = strings.ToLower(typeField.Name)
+		}
+
+		if val := fmt.Sprintf("%v", field.Interface()); !(omitEmpty && len(val) == 0) {
+			v.Add(name, val)
+		}
+	}
+	return nil
 }
 
 func prepareRequestBody(b interface{}) (io.Reader, error) {
@@ -178,14 +241,15 @@ func prepareRequestBody(b interface{}) (io.Reader, error) {
 	}
 }
 
-var defaultDialer = &net.Dialer{Timeout: 1000 * time.Millisecond}
-var defaultTransport = &http.Transport{Dial: defaultDialer.Dial, Proxy: http.ProxyFromEnvironment}
-var defaultClient = &http.Client{Transport: defaultTransport}
-var proxyTransport *http.Transport
+var DefaultDialer = &net.Dialer{Timeout: 1000 * time.Millisecond}
+var DefaultTransport http.RoundTripper = &http.Transport{Dial: DefaultDialer.Dial, Proxy: http.ProxyFromEnvironment}
+var DefaultClient = &http.Client{Transport: DefaultTransport}
+
+var proxyTransport http.RoundTripper
 var proxyClient *http.Client
 
 func SetConnectTimeout(duration time.Duration) {
-	defaultDialer.Timeout = duration
+	DefaultDialer.Timeout = duration
 }
 
 func (r *Request) AddHeader(name string, value string) {
@@ -195,11 +259,48 @@ func (r *Request) AddHeader(name string, value string) {
 	r.headers = append(r.headers, headerTuple{name: name, value: value})
 }
 
+func (r Request) WithHeader(name string, value string) Request {
+	r.AddHeader(name, value)
+	return r
+}
+
+func (r *Request) AddCookie(c *http.Cookie) {
+	r.cookies = append(r.cookies, c)
+}
+
+func (r Request) WithCookie(c *http.Cookie) Request {
+	r.AddCookie(c)
+	return r
+}
+
+func (r *Request) AddProxyConnectHeader(name string, value string) {
+	if r.proxyConnectHeaders == nil {
+		r.proxyConnectHeaders = []headerTuple{}
+	}
+	r.proxyConnectHeaders = append(r.proxyConnectHeaders, headerTuple{name: name, value: value})
+}
+
+func (r Request) WithProxyConnectHeader(name string, value string) Request {
+	r.AddProxyConnectHeader(name, value)
+	return r
+}
+
 func (r Request) Do() (*Response, error) {
-	var req *http.Request
-	var er error
-	var transport = defaultTransport
-	var client = defaultClient
+	var client = DefaultClient
+	var transport = DefaultTransport
+	var resUri string
+	var redirectFailed bool
+
+	r.Method = valueOrDefault(r.Method, "GET")
+
+	// use a client with a cookie jar if necessary. We create a new client not
+	// to modify the default one.
+	if r.CookieJar != nil {
+		client = &http.Client{
+			Transport: transport,
+			Jar:       r.CookieJar,
+		}
+	}
 
 	if r.Proxy != "" {
 		proxyUrl, err := url.Parse(r.Proxy)
@@ -207,23 +308,142 @@ func (r Request) Do() (*Response, error) {
 			// proxy address is in a wrong format
 			return nil, &Error{Err: err}
 		}
-		if proxyTransport == nil {
-			proxyTransport = &http.Transport{Dial: defaultDialer.Dial, Proxy: http.ProxyURL(proxyUrl)}
-			proxyClient = &http.Client{Transport: proxyTransport}
-		} else {
+
+		proxyHeader := make(http.Header)
+		if r.proxyConnectHeaders != nil {
+			for _, header := range r.proxyConnectHeaders {
+				proxyHeader.Add(header.name, header.value)
+			}
+		}
+
+		//If jar is specified new client needs to be built
+		if proxyTransport == nil || client.Jar != nil {
+			proxyTransport = &http.Transport{
+				Dial:               DefaultDialer.Dial,
+				Proxy:              http.ProxyURL(proxyUrl),
+				ProxyConnectHeader: proxyHeader,
+			}
+			proxyClient = &http.Client{Transport: proxyTransport, Jar: client.Jar}
+		} else if proxyTransport, ok := proxyTransport.(*http.Transport); ok {
 			proxyTransport.Proxy = http.ProxyURL(proxyUrl)
+			proxyTransport.ProxyConnectHeader = proxyHeader
 		}
 		transport = proxyTransport
 		client = proxyClient
 	}
 
-	if r.Insecure {
-		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	} else if transport.TLSClientConfig != nil {
-		// the default TLS client (when transport.TLSClientConfig==nil) is
-		// already set to verify, so do nothing in that case
-		transport.TLSClientConfig.InsecureSkipVerify = false
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+
+		if len(via) > r.MaxRedirects {
+			redirectFailed = true
+			return errors.New("Error redirecting. MaxRedirects reached")
+		}
+
+		resUri = req.URL.String()
+
+		//By default Golang will not redirect request headers
+		// https://code.google.com/p/go/issues/detail?id=4800&q=request%20header
+		if r.RedirectHeaders {
+			for key, val := range via[0].Header {
+				req.Header[key] = val
+			}
+		}
+		return nil
 	}
+
+	if transport, ok := transport.(*http.Transport); ok {
+		if r.Insecure {
+			if transport.TLSClientConfig != nil {
+				transport.TLSClientConfig.InsecureSkipVerify = true
+			} else {
+				transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+			}
+		} else if transport.TLSClientConfig != nil {
+			// the default TLS client (when transport.TLSClientConfig==nil) is
+			// already set to verify, so do nothing in that case
+			transport.TLSClientConfig.InsecureSkipVerify = false
+		}
+	}
+
+	req, err := r.NewRequest()
+
+	if err != nil {
+		// we couldn't parse the URL.
+		return nil, &Error{Err: err}
+	}
+
+	timeout := false
+	if r.Timeout > 0 {
+		client.Timeout = r.Timeout
+	}
+
+	if r.ShowDebug {
+		dump, err := httputil.DumpRequest(req, true)
+		if err != nil {
+			log.Println(err)
+		}
+		log.Println(string(dump))
+	}
+
+	if r.OnBeforeRequest != nil {
+		r.OnBeforeRequest(&r, req)
+	}
+	res, err := client.Do(req)
+
+	if err != nil {
+		if !timeout {
+			if t, ok := err.(itimeout); ok {
+				timeout = t.Timeout()
+			}
+			if ue, ok := err.(*url.Error); ok {
+				if t, ok := ue.Err.(itimeout); ok {
+					timeout = t.Timeout()
+				}
+			}
+		}
+
+		var response *Response
+		//If redirect fails we still want to return response data
+		if redirectFailed {
+			if res != nil {
+				response = &Response{res, resUri, &Body{reader: res.Body}, req}
+			} else {
+				response = &Response{res, resUri, nil, req}
+			}
+		}
+
+		//If redirect fails and we haven't set a redirect count we shouldn't return an error
+		if redirectFailed && r.MaxRedirects == 0 {
+			return response, nil
+		}
+
+		return response, &Error{timeout: timeout, Err: err}
+	}
+
+	if r.Compression != nil && strings.Contains(res.Header.Get("Content-Encoding"), r.Compression.ContentEncoding) {
+		compressedReader, err := r.Compression.reader(res.Body)
+		if err != nil {
+			return nil, &Error{Err: err}
+		}
+		return &Response{res, resUri, &Body{reader: res.Body, compressedReader: compressedReader}, req}, nil
+	}
+
+	return &Response{res, resUri, &Body{reader: res.Body}, req}, nil
+}
+
+func (r Request) addHeaders(headersMap http.Header) {
+	if len(r.UserAgent) > 0 {
+		headersMap.Add("User-Agent", r.UserAgent)
+	}
+	if r.Accept != "" {
+		headersMap.Add("Accept", r.Accept)
+	}
+	if r.ContentType != "" {
+		headersMap.Add("Content-Type", r.ContentType)
+	}
+}
+
+func (r Request) NewRequest() (*http.Request, error) {
 
 	b, e := prepareRequestBody(r.Body)
 	if e != nil {
@@ -256,18 +476,15 @@ func (r Request) Do() (*Response, error) {
 	} else {
 		bodyReader = b
 	}
-	req, er = http.NewRequest(r.Method, r.Uri, bodyReader)
 
-	if er != nil {
-		// we couldn't parse the URL.
-		return nil, &Error{Err: er}
+	req, err := http.NewRequest(r.Method, r.Uri, bodyReader)
+	if err != nil {
+		return nil, err
 	}
-
 	// add headers to the request
 	req.Host = r.Host
-	req.Header.Add("User-Agent", r.UserAgent)
-	req.Header.Add("Content-Type", r.ContentType)
-	req.Header.Add("Accept", r.Accept)
+
+	r.addHeaders(req.Header)
 	if r.Compression != nil {
 		req.Header.Add("Content-Encoding", r.Compression.ContentEncoding)
 		req.Header.Add("Accept-Encoding", r.Compression.ContentEncoding)
@@ -279,60 +496,20 @@ func (r Request) Do() (*Response, error) {
 	}
 
 	//use basic auth if required
-	if r.BasicAuthUsername != "" && r.BasicAuthPassword != "" {
+	if r.BasicAuthUsername != "" {
 		req.SetBasicAuth(r.BasicAuthUsername, r.BasicAuthPassword)
 	}
 
-	timeout := false
-	var timer *time.Timer
-	if r.Timeout > 0 {
-		timer = time.AfterFunc(r.Timeout, func() {
-			transport.CancelRequest(req)
-			timeout = true
-		})
+	for _, c := range r.cookies {
+		req.AddCookie(c)
 	}
-
-	res, err := client.Do(req)
-	if timer != nil {
-		timer.Stop()
-	}
-
-	if err != nil {
-		if op, ok := err.(*net.OpError); !timeout && ok {
-			timeout = op.Timeout()
-		}
-		return nil, &Error{timeout: timeout, Err: err}
-	}
-
-	if isRedirect(res.StatusCode) && r.MaxRedirects > 0 {
-		loc, _ := res.Location()
-		r.MaxRedirects--
-		r.Uri = loc.String()
-		return r.Do()
-	}
-
-	if r.Compression != nil && strings.Contains(res.Header.Get("Content-Encoding"), r.Compression.ContentEncoding) {
-		compressedReader, err := r.Compression.reader(res.Body)
-		if err != nil {
-			return nil, &Error{Err: err}
-		}
-		return &Response{StatusCode: res.StatusCode, ContentLength: res.ContentLength, Header: res.Header, Body: &Body{reader: res.Body, compressedReader: compressedReader}}, nil
-	} else {
-		return &Response{StatusCode: res.StatusCode, ContentLength: res.ContentLength, Header: res.Header, Body: &Body{reader: res.Body}}, nil
-	}
+	return req, nil
 }
 
-func isRedirect(status int) bool {
-	switch status {
-	case http.StatusMovedPermanently:
-		return true
-	case http.StatusFound:
-		return true
-	case http.StatusSeeOther:
-		return true
-	case http.StatusTemporaryRedirect:
-		return true
-	default:
-		return false
+// Return value if nonempty, def otherwise.
+func valueOrDefault(value, def string) string {
+	if value != "" {
+		return value
 	}
+	return def
 }
