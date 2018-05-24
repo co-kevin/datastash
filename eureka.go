@@ -42,15 +42,15 @@ func info(c *gin.Context) {
 }
 
 // 启用 Eureka Client，注册到 Spring Eureka 注册中心
-func enableEurekaClient() {
+func enableEurekaClient(eurekaHost string, instance *fargo.Instance) {
 	eureka = fargo.NewConn(eurekaHost)
 	if err := eureka.RegisterInstance(instance); err != nil {
 		log.Panic(err.Error())
 	}
-	go startHeartBeat()
+	go startHeartBeat(instance)
 }
 
-func startHeartBeat() {
+func startHeartBeat(instance *fargo.Instance) {
 	for {
 		if err := eureka.HeartBeatInstance(instance); err != nil {
 			eureka.ReregisterInstance(instance)

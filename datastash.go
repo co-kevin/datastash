@@ -1,29 +1,34 @@
 package main
 
 import (
+	"github.com/caarlos0/env"
 	"github.com/gin-gonic/gin"
 	"github.com/hudl/fargo"
-	"strconv"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 )
 
 const (
-	port       = 9999
-	appName    = "datastash"
-	eurekaHost = "http://localhost:8761/eureka"
-	mongoUrl   = "mongodb://localhost:27017"
+	appName = "datastash"
 )
 
 var (
-	ipAddr  = getLocalIP()
-	eureka  fargo.EurekaConnection
-	baseUrl = "http://" + ipAddr + ":" + strconv.Itoa(port)
+	cfg      config
+	ipAddr   = getLocalIP()
+	eureka   fargo.EurekaConnection
+	instance *fargo.Instance
+)
+
+func init() {
+	env.Parse(&cfg)
+	connectMongo(cfg.MongoURL)
+	baseUrl := "http://" + ipAddr + ":" + strconv.Itoa(cfg.Port)
 	// 当前微服务实例描述
 	instance = &fargo.Instance{
 		HostName:         ipAddr,
-		Port:             port,
+		Port:             cfg.Port,
 		App:              appName,
 		IPAddr:           ipAddr,
 		VipAddress:       ipAddr,
@@ -35,12 +40,8 @@ var (
 		DataCenterInfo:   fargo.DataCenterInfo{Name: fargo.MyOwn},
 		LeaseInfo:        fargo.LeaseInfo{RenewalIntervalInSecs: 1},
 	}
-)
-
-func init() {
-	go enableEurekaClient()
+	go enableEurekaClient(cfg.EurekaHost, instance)
 	go listenNotify()
-	connectMongo(mongoUrl)
 }
 
 func main() {
@@ -48,7 +49,7 @@ func main() {
 	r.GET("/health", health)
 	r.GET("/info", info)
 	r.POST("/rpc/stash", stash)
-	r.Run(":" + strconv.Itoa(port)) // listen and serve on 0.0.0.0:9999
+	r.Run(":" + strconv.Itoa(cfg.Port)) // listen and serve on 0.0.0.0:9999
 }
 
 // 监听程序结束信号，执行 destroy 方法
