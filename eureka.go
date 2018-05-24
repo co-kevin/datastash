@@ -3,44 +3,27 @@ package main
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/hudl/fargo"
+	"net"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 	"time"
 )
 
-const (
-	port       = 9999
-	appName    = "datastash"
-	hostName   = "localhost"
-	ipAddr     = "localhost"
-	eurekaHost = "http://localhost:8761/eureka"
-)
-
-var (
-	eureka  fargo.EurekaConnection
-	baseUrl = "http://" + ipAddr + ":" + strconv.Itoa(port)
-	// 当前微服务实例描述
-	instance = &fargo.Instance{
-		HostName:         hostName,
-		Port:             port,
-		App:              appName,
-		IPAddr:           ipAddr,
-		VipAddress:       ipAddr,
-		SecureVipAddress: ipAddr,
-		HealthCheckUrl:   baseUrl + "/health",
-		StatusPageUrl:    baseUrl + "/info",
-		HomePageUrl:      baseUrl,
-		Status:           fargo.UP,
-		DataCenterInfo:   fargo.DataCenterInfo{Name: fargo.MyOwn},
-		LeaseInfo:        fargo.LeaseInfo{RenewalIntervalInSecs: 1},
+func getLocalIP() string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return ""
 	}
-)
-
-func init() {
-	go enableEurekaClient()
-	go listenDestroy()
+	for _, address := range addrs {
+		// check the address type and if it is not a loopback the display it
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String()
+			}
+		}
+	}
+	return ""
 }
 
 // Eureka 健康检查 API Handler
