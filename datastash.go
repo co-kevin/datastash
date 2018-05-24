@@ -4,6 +4,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/hudl/fargo"
 	"strconv"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 const (
@@ -36,7 +39,7 @@ var (
 
 func init() {
 	go enableEurekaClient()
-	go listenDestroy()
+	go listenNotify()
 	connectMongo(mongoUrl)
 }
 
@@ -46,4 +49,19 @@ func main() {
 	r.GET("/info", info)
 	r.POST("/rpc/stash", stash)
 	r.Run(":" + strconv.Itoa(port)) // listen and serve on 0.0.0.0:9999
+}
+
+// 监听程序结束信号，执行 destroy 方法
+func listenNotify() {
+	c := make(chan os.Signal)
+	// 监听指定信号 ctrl+c kill
+	signal.Notify(c, os.Interrupt, os.Kill, syscall.SIGUSR1, syscall.SIGUSR2)
+	// 阻塞直至有信号传入
+	s := <-c
+	onDestroy(s)
+}
+
+// 反注册 Eureka Client
+func onDestroy(_ os.Signal) {
+	eureka.DeregisterInstance(instance)
 }

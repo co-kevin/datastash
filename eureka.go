@@ -4,9 +4,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/hudl/fargo"
 	"net"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 )
 
@@ -60,19 +57,4 @@ func startHeartBeat() {
 		}
 		time.Sleep(10 * time.Second)
 	}
-}
-
-// 监听程序结束信号，执行 destroy 方法
-func listenDestroy() {
-	c := make(chan os.Signal)
-	// 监听指定信号 ctrl+c kill
-	signal.Notify(c, os.Interrupt, os.Kill, syscall.SIGUSR1, syscall.SIGUSR2)
-	// 阻塞直至有信号传入
-	s := <-c
-	destroy(s)
-}
-
-// 反注册 Eureka Client
-func destroy(_ os.Signal) {
-	eureka.DeregisterInstance(instance)
 }
