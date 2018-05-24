@@ -4,17 +4,20 @@
 [[projects]]
   name = "github.com/cenkalti/backoff"
   packages = ["."]
-  revision = "4dc77674aceaabba2c7e3da25d4c823edfb73f99"
+  revision = "2ea60e5f094469f9e65adb9cd103795b73ae743e"
+  version = "v2.0.0"
 
 [[projects]]
   name = "github.com/clbanning/x2j"
   packages = ["."]
-  revision = "5ee34bb343f10ecfc125261107681de62f985cf6"
+  revision = "8514236bc68ead794076e8ad386351dda45e69c4"
+  version = "1.1"
 
 [[projects]]
+  branch = "master"
   name = "github.com/franela/goreq"
   packages = ["."]
-  revision = "9df54ca75ad62b6295f33ca96e16a2ca10bc137a"
+  revision = "bcd34c9993f899273c74baaa95e15386cd97b6e7"
 
 [[projects]]
   branch = "master"
@@ -41,7 +44,8 @@
 [[projects]]
   name = "github.com/golang/protobuf"
   packages = ["proto"]
-  revision = "5a0f697c9ed9d68fef0116532c6e05cfeae00e55"
+  revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
+  version = "v1.1.0"
 
 [[projects]]
   name = "github.com/hudl/fargo"
@@ -52,12 +56,14 @@
 [[projects]]
   name = "github.com/mattn/go-isatty"
   packages = ["."]
-  revision = "57fdcb988a5c543893cc61bce354a6e24ab70022"
+  revision = "0360b2af4f38e8d38c7fce2a9f4e702702d73a39"
+  version = "v0.0.3"
 
 [[projects]]
   name = "github.com/miekg/dns"
   packages = ["."]
-  revision = "f01e44c2fdbf755201344b5b7917f974a4badd13"
+  revision = "e57bf427e68187a27e22adceac868350d7a7079b"
+  version = "v1.0.7"
 
 [[projects]]
   name = "github.com/mongodb/mongo-go-driver"
@@ -93,34 +99,49 @@
 [[projects]]
   name = "github.com/op/go-logging"
   packages = ["."]
-  revision = "d2e44aa77b7195c0ef782189985dd8550e22e4de"
+  revision = "b2cb9fa56473e98db8caba80237377e83fe44db5"
+  version = "v1"
 
 [[projects]]
   name = "github.com/ugorji/go"
   packages = ["codec"]
-  revision = "c88ee250d0221a57af388746f5cf03768c21d6e2"
+  revision = "b4c50a2b199d93b13dc15e78929cfb23bfdf21ab"
+  version = "v1.1.1"
 
 [[projects]]
+  branch = "master"
   name = "golang.org/x/crypto"
-  packages = ["pbkdf2"]
-  revision = "5f31782cfb2b6373211f8f9fbf31283fa234b570"
+  packages = [
+    "ed25519",
+    "ed25519/internal/edwards25519",
+    "pbkdf2"
+  ]
+  revision = "75e913eb8a8e3d31a97b216de09de106a7b07681"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
-  packages = ["context"]
+  packages = [
+    "bpf",
+    "context",
+    "internal/iana",
+    "internal/socket",
+    "ipv4",
+    "ipv6"
+  ]
   revision = "9ef9f5bb98a1fdc41f8cf6c250a4404b4085e389"
 
 [[projects]]
+  branch = "master"
   name = "golang.org/x/sync"
   packages = ["semaphore"]
-  revision = "fd80eb99c8f653c847d294a001bdf2a3a6f768f5"
+  revision = "1d60e4601c6fd243af51cc01ddf169918a5407ca"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "88eb85aaee56831ad49eaf7aa80d73de9814cde2"
+  revision = "77b0e4315053a57ed2962443614bdb28db152054"
 
 [[projects]]
   name = "gopkg.in/gcfg.v1"
@@ -130,22 +151,30 @@
     "token",
     "types"
   ]
-  revision = "0ef1a8547f99b94fac9af5377dd72febba18f37c"
+  revision = "61b2c08bc8f6068f7c5ca684372f9a6cb1c45ebe"
+  version = "v1.2.3"
 
 [[projects]]
   name = "gopkg.in/go-playground/validator.v8"
   packages = ["."]
-  revision = "5f57d2222ad794d0dffb07e664ea05e2ee07d60c"
-  version = "v8.18.1"
+  revision = "5f1438d3fca68893a817e4a66806cea46a9e4ebf"
+  version = "v8.18.2"
+
+[[projects]]
+  name = "gopkg.in/warnings.v0"
+  packages = ["."]
+  revision = "ec4a0fea49c7b46c2aeb0b51aac55779c607e52b"
+  version = "v0.1.2"
 
 [[projects]]
   name = "gopkg.in/yaml.v2"
   packages = ["."]
-  revision = "a5b47d31c556af34a302ce5d659e6fea44d90de0"
+  revision = "5420a8b6744d3b0345ab293f6fcba19c978f1183"
+  version = "v2.2.1"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "9d6d50fdd3355b6d998625118091f0cc116c58d6b56f00c160bfb7ef91737fdd"
+  inputs-digest = "bd23933d87b5a3d65c05046a029465d362251aa575e1666332bde464056a9558"
   solver-name = "gps-cdcl"
   solver-version = 1
