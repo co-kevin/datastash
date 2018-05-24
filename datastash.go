@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/caarlos0/env"
 	"github.com/gin-gonic/gin"
-	"github.com/hudl/fargo"
+	"github.com/hookszhang/fargo"
 	"os"
 	"os/signal"
 	"strconv"
@@ -27,6 +27,7 @@ func init() {
 	baseUrl := "http://" + ipAddr + ":" + strconv.Itoa(cfg.Port)
 	// 当前微服务实例描述
 	instance = &fargo.Instance{
+		InstanceId:       ipAddr + ":" + appName + ":" + strconv.Itoa(cfg.Port),
 		HostName:         ipAddr,
 		Port:             cfg.Port,
 		App:              appName,
