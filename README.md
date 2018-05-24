@@ -2,16 +2,6 @@
 
 Go 语言编写的一个微服务，用于接收业务数据日志存入 MongoDB，便于以后数据分析
 
-## Dep
-
-已将 `vendor` 目录加入版本控制，检出项目后不用安装依赖
-
-如想增加依赖必须使用代理
-
-```bash
-$ HTTP_PROXY=<your proxy> dep ensure -add <repository url>
-```
-
 ## Api
 
 ### HTTP Request
@@ -37,3 +27,23 @@ Property | Require | Description
 database | true | The mongodb database name.
 collection | true | The mongodb collection name.
 document | true | MongoDB document object, can't be array.
+
+## Dep
+
+已将 `vendor` 目录加入版本控制，检出项目后不用安装依赖
+
+如想增加依赖必须使用代理
+
+```bash
+$ HTTP_PROXY=<your proxy> dep ensure -add <repository url>
+```
+
+## Configuration
+
+项目配置使用系统环境变量，可配置参数如下：
+
+```
+Port       int    `env:"DATASTASH_PORT" envDefault:"9999"`
+EurekaHost string `env:"DATASTASH_EUREKA_HOST" envDefault:"http://localhost:8761/eureka"`
+MongoURL   string `env:"DATASTASH_MONGO_URL" envDefault:"mongodb://localhost:27017"`
+```
