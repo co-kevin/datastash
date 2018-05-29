@@ -1,27 +1,6 @@
 # datastash
 
-Go 语言编写的一个微服务，用于接收业务数据日志，便于以后数据分析
-
-## Technology
-
-- [glide](https://github.com/Masterminds/glide) Package Management for Golang
-- [gin](https://gin-gonic.github.io/gin/) Gin is a HTTP web framework written in Go (Golang). It features a Martini-like API with much better performance -- up to 40 times faster. If you need smashing performance, get yourself some Gin.
-- [fargo](https://github.com/hudl/fargo) Golang client for Netflix Eureka
-- [mongo-go-driver](https://github.com/mongodb/mongo-go-driver) The Go driver for MongoDB
-
-## Glide Mirrors
-
-```yml
-repos:
-- original: https://golang.org/x/net/ipv4
-  repo: https://github.com/golang/net.git
-- original: https://golang.org/x/net/ipv6
-  repo: https://github.com/golang/net.git
-- original: https://golang.org/x/crypto/ed25519
-  repo: https://github.com/golang/crypto.git
-- original: https://golang.org/x/sys/unix
-  repo: https://github.com/golang/sys.git
-```
+Go 语言编写的一个微服务，用于接收业务数据日志存入 MongoDB，便于以后数据分析
 
 ## Api
 
@@ -48,3 +27,23 @@ Property | Require | Description
 database | true | The mongodb database name.
 collection | true | The mongodb collection name.
 document | true | MongoDB document object, can't be array.
+
+## Dep
+
+已将 `vendor` 目录加入版本控制，检出项目后不用安装依赖
+
+如想增加依赖必须使用代理
+
+```bash
+$ HTTP_PROXY=<your proxy> dep ensure -add <repository url>
+```
+
+## Configuration
+
+项目配置使用系统环境变量，可配置参数如下：
+
+```
+Port       int    `env:"DATASTASH_PORT" envDefault:"9999"`
+EurekaHost string `env:"DATASTASH_EUREKA_HOST" envDefault:"http://localhost:8761/eureka"`
+MongoURL   string `env:"DATASTASH_MONGO_URL" envDefault:"mongodb://localhost:27017"`
+```

@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/hudl/fargo"
+	"github.com/hookszhang/fargo"
 	"net"
 	"time"
 )
