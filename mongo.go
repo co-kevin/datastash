@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"github.com/mongodb/mongo-go-driver/mongo"
+	"fmt"
 )
 
 var mongoClient *mongo.Client
@@ -21,5 +22,9 @@ func connectMongo(url string) {
 
 // 插入文档到指定 database, collection
 func insertMongoDocument(database string, collection string, document interface{}) (*mongo.InsertOneResult, error) {
+	if database == "admin" || database == "local" {
+		return nil, fmt.Errorf("cannot write data to a protected database, database: [%s], collection: [%s]", database, collection)
+	}
+
 	return mongoClient.Database(database).Collection(collection).InsertOne(context.Background(), document)
 }
