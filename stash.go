@@ -18,7 +18,7 @@ func stash(c *gin.Context) {
 		go func() {
 			_, err := insertMongoDocument(json.Database, json.Collection, json.Document)
 			if err != nil {
-				log.Error(err.Error())
+				log.Errorf("[Error] %s", err.Error())
 			}
 		}()
 		c.Status(http.StatusOK)
