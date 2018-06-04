@@ -36,7 +36,7 @@ func info(c *gin.Context) {
 		"project": gin.H{
 			"version":     "0.0.1-SNAPSHOT",
 			"title":       appName,
-			"description": "Golang micro service",
+			"description": "Datastash for MongoDB",
 		},
 	})
 }
