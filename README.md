@@ -1,6 +1,6 @@
 # datastash
 
-Go 语言编写的一个微服务，用于接收业务数据日志存入 MongoDB，便于以后数据分析
+Spring Cloud 微服务，用于接收业务数据日志存入 MongoDB，便于以后数据分析
 
 ## Api
 
